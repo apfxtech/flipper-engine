@@ -30,6 +30,7 @@ int main(int argc, char** argv) {
 
     fze::System sys;
     load_bin(sys, bin);
+    if (sys.load_otp("otp_dump.bin")) printf("OTP loaded (name='%.8s')\n", &sys.otp[24]);
 
     arm::CPU c;
     c.mem = &sys;

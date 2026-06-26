@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include <cstring>
+#include <cstdio>
 
 namespace fze {
 
@@ -13,6 +14,8 @@ constexpr uint32_t FLASH_BASE = 0x08000000u;
 constexpr uint32_t FLASH_SIZE = 0x00100000u;
 constexpr uint32_t SRAM_BASE = 0x20000000u;
 constexpr uint32_t SRAM_SIZE = 0x00040000u;
+constexpr uint32_t OTP_BASE = 0x1FFF7000u;
+constexpr uint32_t OTP_SIZE = 0x00000400u;
 
 constexpr uint32_t GPIO_BASE = 0x48000000u;
 constexpr uint32_t RCC_BASE = 0x58000000u;
@@ -37,6 +40,7 @@ struct GpioPort {
 struct System : arm::Memory {
     std::vector<uint8_t> flash;
     std::vector<uint8_t> sram;
+    std::vector<uint8_t> otp;
     std::unordered_map<uint32_t, uint32_t> io;
 
     uint32_t rcc_cr = 0;
@@ -70,7 +74,7 @@ struct System : arm::Memory {
 
     GpioPort gpio[8];
 
-    System() : flash(FLASH_SIZE, 0xFF), sram(SRAM_SIZE, 0) {
+    System() : flash(FLASH_SIZE, 0xFF), sram(SRAM_SIZE, 0), otp(OTP_SIZE, 0xFF) {
         rcc_cr = recompute_cr(0x00000061u);
         gpio[1].idr_input = (1u << 10) | (1u << 11) | (1u << 12);
         gpio[2].idr_input = (1u << 6) | (1u << 13) | (1u << 10);
@@ -87,7 +91,16 @@ struct System : arm::Memory {
         if (a + n <= FLASH_SIZE) return &flash[a];
         if (a >= FLASH_BASE && a + n <= FLASH_BASE + FLASH_SIZE) return &flash[a - FLASH_BASE];
         if (a >= SRAM_BASE && a + n <= SRAM_BASE + SRAM_SIZE) return &sram[a - SRAM_BASE];
+        if (a >= OTP_BASE && a + n <= OTP_BASE + OTP_SIZE) return &otp[a - OTP_BASE];
         return nullptr;
+    }
+
+    bool load_otp(const char* path) {
+        FILE* f = fopen(path, "rb");
+        if (!f) return false;
+        fread(otp.data(), 1, otp.size(), f);
+        fclose(f);
+        return true;
     }
 
     bool is_gpio(uint32_t a, int& port, uint32_t& off) {
@@ -304,7 +317,7 @@ struct System : arm::Memory {
     uint16_t read16(uint32_t a) override { if (auto q = map(a, 2)) { uint16_t v; memcpy(&v, q, 2); return v; } return (uint16_t)(mmio_read_word(a & ~3u) >> ((a & 2) * 8)); }
     uint8_t read8(uint32_t a) override { if (auto q = map(a, 1)) return *q; return (uint8_t)(mmio_read_word(a & ~3u) >> ((a & 3) * 8)); }
 
-    void write32(uint32_t a, uint32_t v) override { if (a >= FLASH_BASE && a < FLASH_BASE + FLASH_SIZE) return; if (auto q = map(a, 4)) { memcpy(q, &v, 4); return; } mmio_write_word(a & ~3u, v); }
+    void write32(uint32_t a, uint32_t v) override { if (a >= FLASH_BASE && a < FLASH_BASE + FLASH_SIZE) return; if (a >= OTP_BASE && a < OTP_BASE + OTP_SIZE) return; if (auto q = map(a, 4)) { memcpy(q, &v, 4); return; } mmio_write_word(a & ~3u, v); }
     void write16(uint32_t a, uint16_t v) override { if (auto q = map(a, 2)) { memcpy(q, &v, 2); return; } uint32_t w = mmio_read_word(a & ~3u), s = (a & 2) * 8; mmio_write_word(a & ~3u, (w & ~(0xFFFFu << s)) | ((uint32_t)v << s)); }
     void write8(uint32_t a, uint8_t v) override { if (auto q = map(a, 1)) { *q = v; return; } uint32_t w = mmio_read_word(a & ~3u), s = (a & 3) * 8; mmio_write_word(a & ~3u, (w & ~(0xFFu << s)) | ((uint32_t)v << s)); }
 };

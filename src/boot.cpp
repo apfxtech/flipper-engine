@@ -52,6 +52,7 @@ int main(int argc, char** argv) {
     fze::System sys;
     load_bin(sys, bin);
     load_dis("reference/firmware.dis");
+    if (sys.load_otp("otp_dump.bin")) printf("OTP loaded (name='%.8s')\n", &sys.otp[24]);
 
     arm::CPU c;
     c.mem = &sys;
@@ -66,7 +67,7 @@ int main(int argc, char** argv) {
         ++frame_count;
         int set = 0;
         for (int i = 0; i < w * h; ++i) set += px[i];
-        if (dumped || set < 300) return;
+        if (dumped || frame_count < 6 || set < 300) return;
         dumped = true;
         printf("\n=== FRAME #%d, %d px set, cyc %llu (on=%d) ===\n", frame_count, set,
                (unsigned long long)c.cycles, sys.lcd.on);
