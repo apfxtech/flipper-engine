@@ -22,6 +22,7 @@ constexpr uint32_t RCC_BASE = 0x58000000u;
 constexpr uint32_t SPI1_BASE = 0x40013000u;
 constexpr uint32_t SPI2_BASE = 0x40003800u;
 constexpr uint32_t IPCC_BASE = 0x58000C00u;
+constexpr uint32_t EXTI_BASE = 0x58000800u;
 constexpr uint32_t RNG_BASE = 0x58001000u;
 constexpr uint32_t HSEM_BASE = 0x58001400u;
 constexpr uint32_t HSEM_CORE1_LOCK = 0x80000400u;
@@ -52,6 +53,10 @@ struct System : arm::Memory {
     uint32_t ipcc_c1cr = 0, ipcc_c1mr = 0, ipcc_c1scr = 0, ipcc_c1toc2sr = 0;
     uint32_t ipcc_c2cr = 0, ipcc_c2mr = 0, ipcc_c2scr = 0, ipcc_c2toc1sr = 0;
     bool core2_started = false;
+
+    uint32_t exti_rtsr1 = 0, exti_ftsr1 = 0, exti_swier1 = 0, exti_pr1 = 0, exti_imr1 = 0;
+    uint32_t prev_buttons = 0;
+    uint64_t dbg_exti_fired = 0;
 
     struct SpiDev {
         bool rx_valid = false;
@@ -189,7 +194,6 @@ struct System : arm::Memory {
             case 0x04: ipcc_c1mr = v; break;
             case 0x08:
                 ipcc_c2toc1sr &= ~(v & 0x3Fu);
-                ipcc_c1toc2sr |= (v >> 16) & 0x3Fu;
                 break;
             case 0x0C: ipcc_c1toc2sr = v; break;
             case 0x10: ipcc_c2cr = v; break;
@@ -242,6 +246,55 @@ struct System : arm::Memory {
         }
     }
 
+    uint32_t exti_read(uint32_t off) {
+        switch (off) {
+            case 0x00: return exti_rtsr1;
+            case 0x04: return exti_ftsr1;
+            case 0x08: return exti_swier1;
+            case 0x0C: return exti_pr1;
+            case 0x80: return exti_imr1;
+            default: { auto it = io.find(EXTI_BASE + off); return it == io.end() ? 0 : it->second; }
+        }
+    }
+    void exti_write(uint32_t off, uint32_t v) {
+        switch (off) {
+            case 0x00: exti_rtsr1 = v; break;
+            case 0x04: exti_ftsr1 = v; break;
+            case 0x08: exti_swier1 = v; break;
+            case 0x0C: exti_pr1 &= ~v; break;
+            case 0x80: exti_imr1 = v; break;
+            default: io[EXTI_BASE + off] = v; break;
+        }
+    }
+
+    void exti_poll() {
+        if (!bridge.poll_buttons || !cpu) return;
+        struct BtnPin { uint32_t mask; int line; int irq; };
+        static const BtnPin pins[] = {
+            {ButtonUp, 10, 40}, {ButtonLeft, 11, 40}, {ButtonRight, 12, 40},
+            {ButtonDown, 6, 23}, {ButtonBack, 13, 40}, {ButtonOk, 3, 9},
+        };
+        uint32_t now = bridge.poll_buttons();
+        uint32_t changed = now ^ prev_buttons;
+        if (changed) {
+            for (auto& b : pins) {
+                if (!(changed & b.mask)) continue;
+                bool now_pressed = now & b.mask;
+                bool was_pressed = prev_buttons & b.mask;
+                uint32_t linebit = 1u << b.line;
+                bool falling = now_pressed && !was_pressed;
+                bool rising = !now_pressed && was_pressed;
+                bool trig = (falling && (exti_ftsr1 & linebit)) || (rising && (exti_rtsr1 & linebit));
+                if (trig && (exti_imr1 & linebit)) {
+                    exti_pr1 |= linebit;
+                    cpu->nvic_ispr[b.irq / 32] |= (1u << (b.irq % 32));
+                    dbg_exti_fired++;
+                }
+            }
+        }
+        prev_buttons = now;
+    }
+
     void core2_tick() {
         if (core2_started || !cpu) return;
         uint32_t p_sys = read32(TL_REF_TABLE + 12);
@@ -284,6 +337,7 @@ struct System : arm::Memory {
         if (is_gpio(a, p, off)) return gpio_read(p, off);
         { uint32_t so; if (SpiDev* sd = spi_for(a, so)) return spi_read(*sd, so); }
         if (a >= IPCC_BASE && a < IPCC_BASE + 0x400) return ipcc_read(a - IPCC_BASE);
+        if (a >= EXTI_BASE && a < EXTI_BASE + 0x400) return exti_read(a - EXTI_BASE);
         if (a >= RNG_BASE && a < RNG_BASE + 0x400) {
             uint32_t off = a - RNG_BASE;
             if (off == 0x04) return 0x1u;
@@ -308,6 +362,7 @@ struct System : arm::Memory {
         if (is_gpio(a, p, off)) { gpio_write(p, off, v); return; }
         { uint32_t so; if (SpiDev* sd = spi_for(a, so)) { spi_write(*sd, so, v); return; } }
         if (a >= IPCC_BASE && a < IPCC_BASE + 0x400) { ipcc_write(a - IPCC_BASE, v); return; }
+        if (a >= EXTI_BASE && a < EXTI_BASE + 0x400) { exti_write(a - EXTI_BASE, v); return; }
         if (a >= RCC_BASE && a < RCC_BASE + 0x400) { rcc_write(a - RCC_BASE, v); return; }
         if (a >= 0xE000E000u && a < 0xE000F000u && cpu) { cpu->ppb_write(a, v); return; }
         io[a] = v;

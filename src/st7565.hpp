@@ -57,7 +57,7 @@ struct St7565 {
     void render(uint8_t* px) const {
         for (int sy = 0; sy < H; ++sy) {
             for (int sx = 0; sx < W; ++sx) {
-                int c = adc_reverse ? sx : (W - 1 - sx);
+                int c = adc_reverse ? (W - 1 - sx) : sx;
                 int y = com_reverse ? sy : (H - 1 - sy);
                 int p = y >> 3;
                 int bit = y & 7;

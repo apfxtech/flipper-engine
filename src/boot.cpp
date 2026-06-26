@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 static std::unordered_map<uint32_t, std::string> g_mn;
+static uint64_t g_gui_hits = 0;
 
 static void load_bin(fze::System& s, const char* path) {
     FILE* f = fopen(path, "rb");
@@ -61,21 +62,26 @@ int main(int argc, char** argv) {
     arm::cpu_reset(c, fze::FLASH_BASE);
     printf("reset PC=%08X SP=%08X\n", c.R[15], c.R[13]);
 
+    uint32_t test_buttons = 0;
+    sys.bridge.poll_buttons = [&]() { return test_buttons; };
+
     int frame_count = 0;
-    bool dumped = false;
+    static uint8_t last_px[128 * 64];
+    int last_set = 0;
     sys.bridge.on_frame = [&](const uint8_t* px, int w, int h) {
         ++frame_count;
         int set = 0;
         for (int i = 0; i < w * h; ++i) set += px[i];
-        if (dumped || frame_count < 6 || set < 300) return;
-        dumped = true;
-        printf("\n=== FRAME #%d, %d px set, cyc %llu (on=%d) ===\n", frame_count, set,
+        memcpy(last_px, px, w * h);
+        last_set = set;
+    };
+    auto dump_frame = [&]() {
+        printf("\n=== LAST FRAME #%d, %d px, cyc %llu (on=%d) ===\n", frame_count, last_set,
                (unsigned long long)c.cycles, sys.lcd.on);
-        for (int y = 0; y < h; y += 2) {
-            for (int x = 0; x < w; ++x) {
-                int top = px[y * w + x], bot = (y + 1 < h) ? px[(y + 1) * w + x] : 0;
-                const char* ch = top && bot ? "█" : top ? "▀" : bot ? "▄" : " ";
-                fputs(ch, stdout);
+        for (int y = 0; y < 64; y += 2) {
+            for (int x = 0; x < 128; ++x) {
+                int top = last_px[y * 128 + x], bot = last_px[(y + 1) * 128 + x];
+                fputs(top && bot ? "█" : top ? "▀" : bot ? "▄" : " ", stdout);
             }
             putchar('\n');
         }
@@ -105,14 +111,29 @@ int main(int argc, char** argv) {
             if (!was && sys.core2_started)
                 printf("CORE2 ready injected at step %llu PC=%08X\n", (unsigned long long)n, c.R[15]);
         }
+        if ((n & 0xFFF) == 0) {
+            uint32_t before = test_buttons;
+            uint64_t t = n / 1000000;
+            test_buttons = 0;
+            if ((t >= 1300 && t < 1340) || (t >= 1400 && t < 1440)) test_buttons = fze::ButtonDown;
+            else if ((t >= 1500 && t < 1540) || (t >= 1600 && t < 1640)) test_buttons = fze::ButtonOk;
+            else if (t >= 1700 && t < 1740) test_buttons = fze::ButtonBack;
+            if (before != test_buttons)
+                printf("[%lluM] TEST buttons=%02X frames=%d fired=%llu spi2_dr=%llu gui_hits=%llu\n",
+                       (unsigned long long)t, test_buttons, frame_count, (unsigned long long)sys.dbg_exti_fired,
+                       (unsigned long long)sys.dbg_spi2_dr, (unsigned long long)g_gui_hits);
+            sys.exti_poll();
+        }
+        if (c.R[15] >= 0x08098000u && c.R[15] < 0x080A6000u) g_gui_hits++;
         window[wi++ & 255] = c.R[15];
         if (!arm::cpu_step(c)) {
             printf("\nFAULT step %llu PC=%08X: %s\n  %s\n", (unsigned long long)n, c.R[15],
                    c.fault_msg ? c.fault_msg : "", dis(c.R[15]));
             return 2;
         }
-        if ((n % 10000000) == 0 && n > 0)
-            printf("[%lluM] PC=%08X : %s\n", (unsigned long long)(n / 1000000), c.R[15], dis(c.R[15]));
+        if ((n % 200000000) == 0 && n > 0)
+            printf("[%lluM] PC=%08X frames=%d last_set=%d\n", (unsigned long long)(n / 1000000),
+                   c.R[15], frame_count, last_set);
         if (false && (n & 0xFFFFF) == 0xFFFFF) {
             uint32_t lo = 0xFFFFFFFF, hi = 0;
             for (int k = 0; k < 256; ++k) { if (window[k] < lo) lo = window[k]; if (window[k] > hi) hi = window[k]; }
@@ -140,6 +161,7 @@ int main(int argc, char** argv) {
         }
     }
     printf("ran %llu, PC=%08X : %s\n", (unsigned long long)n, c.R[15], dis(c.R[15]));
+    dump_frame();
     printf("display: spi2_dr=%llu routed=%llu frames=%d lcd.on=%d page=%d col=%d cs(C11)=%d dc(B1)=%d\n",
            (unsigned long long)sys.dbg_spi2_dr, (unsigned long long)sys.dbg_disp_routed,
            frame_count, sys.lcd.on, sys.lcd.page, sys.lcd.col,
