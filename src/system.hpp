@@ -115,7 +115,7 @@ struct System : arm::Memory {
         int p; uint32_t off;
         if (is_gpio(a, p, off)) return gpio_read(p, off);
         if (a >= RCC_BASE && a < RCC_BASE + 0x400) return rcc_read(a - RCC_BASE);
-        if (a == 0xE0001004u) return cycles ? (uint32_t)(*cycles * 64u) : 0;
+        if (a == 0xE0001004u) return cycles ? (uint32_t)*cycles : 0;
         if (a == 0x4001381Cu || a == 0x4000801Cu) return 0x006000D0u;
         if (a >= 0xE000E000u && a < 0xE000F000u && cpu) return cpu->ppb_read(a);
         auto it = io.find(a);

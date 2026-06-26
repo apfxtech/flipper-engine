@@ -65,10 +65,17 @@ int main(int argc, char** argv) {
     uint64_t n = 0;
     bool hit_reset = false;
     for (; n < budget; ++n) {
-        if (c.R[15] == 0x080040C0u && c.R[0] > 100000u) {
-            printf("DELAY_US(%u) at step %llu LR=%08X : %s\n", c.R[0], (unsigned long long)n,
+        if (!hit_reset && c.R[15] == 0x080128A8u) {
+            hit_reset = true;
+            printf("CRASH at step %llu ip=%08X LR=%08X : %s\n", (unsigned long long)n, c.R[12],
                    c.R[14], dis((c.R[14] & ~1u) - 4));
-            if (!hit_reset) { hit_reset = true; for (int k = 0; k < 40; ++k) { uint32_t pc = window[(wi - 40 + k) & 255]; printf("    %08X : %s\n", pc, dis(pc)); } }
+            printf("  heap globals:");
+            for (uint32_t a = 0x200009B0u; a <= 0x200009E8u; a += 4) printf(" [%X]=%08X", a & 0xFFF, sys.read32(a));
+            printf("\n");
+        }
+        if (c.R[15] == 0x08014808u && c.R[0] >= 0x10000u) {
+            printf("BIG-MALLOC(%u) at step %llu LR=%08X : %s\n", c.R[0], (unsigned long long)n,
+                   c.R[14], dis((c.R[14] & ~1u) - 4));
         }
         window[wi++ & 255] = c.R[15];
         if (!arm::cpu_step(c)) {
