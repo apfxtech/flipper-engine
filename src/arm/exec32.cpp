@@ -185,7 +185,7 @@ static void load_store_dual_excl_tb(CPU& c, uint32_t hw1, uint32_t hw2) {
     if (op1 == 1 && op2 == 1 && op3 <= 1) {
         uint32_t rm = bits(hw2, 3, 0);
         bool half = bit(hw2, 4);
-        uint32_t base = n == 15 ? c.pc_read - 4 : c.R[n];
+        uint32_t base = c.readR(n);
         uint32_t off = half ? c.mem->read16(base + (c.R[rm] << 1)) : c.mem->read8(base + c.R[rm]);
         c.branchWritePC(c.pc_read + 2 * off);
         return;

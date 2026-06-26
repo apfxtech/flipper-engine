@@ -280,7 +280,7 @@ static void decode16(CPU& c, uint32_t op) {
     if (top >= 0x34 && top <= 0x37) {
         uint32_t cond = bits(op, 11, 8);
         if (cond == 0xE) { c.setFault("UDF"); return; }
-        if (cond == 0xF) { c.setFault("SVC"); return; }
+        if (cond == 0xF) { c.pend_svc = true; return; }
         int32_t imm = (int32_t)SignExtend(bits(op, 7, 0) << 1, 9);
         if (c.ConditionPassed(cond)) c.branchWritePC(c.pc_read + (uint32_t)imm);
         return;
@@ -295,6 +295,8 @@ static void decode16(CPU& c, uint32_t op) {
 
 bool cpu_step(CPU& c) {
     if (c.fault) return false;
+    c.systick_tick();
+    c.check_exceptions();
     uint32_t addr = c.R[15];
     uint16_t hw1 = c.mem->read16(addr);
     uint32_t hi = hw1 >> 11;

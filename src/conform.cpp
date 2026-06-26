@@ -1,4 +1,4 @@
-#include "flatmem.hpp"
+#include "system.hpp"
 #include "arm/cpu.hpp"
 
 #include <cstdio>
@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-static void load_bin(fze::FlatMem& m, const char* path) {
+static void load_bin(fze::System& m, const char* path) {
     FILE* f = fopen(path, "rb");
     if (!f) { fprintf(stderr, "no %s\n", path); exit(1); }
     fseek(f, 0, SEEK_END); long n = ftell(f); fseek(f, 0, SEEK_SET);
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
         else if (!strcmp(argv[i], "-dis") && i + 1 < argc) dis = argv[++i];
     }
 
-    fze::FlatMem mem;
+    fze::System mem; mem.cycles = nullptr;
     load_bin(mem, bin);
     std::unordered_map<uint32_t, std::string> mn;
     load_dis(dis, mn);
@@ -55,6 +55,8 @@ int main(int argc, char** argv) {
 
     arm::CPU c;
     c.mem = &mem;
+    mem.cycles = &c.cycles;
+    mem.cpu = &c;
     arm::cpu_reset(c, fze::FLASH_BASE);
     printf("reset PC=%08X SP=%08X\n", c.R[15], c.R[13]);
 
