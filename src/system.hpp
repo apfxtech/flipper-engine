@@ -67,7 +67,7 @@ struct System : arm::Memory {
     System() : flash(FLASH_SIZE, 0xFF), sram(SRAM_SIZE, 0) {
         rcc_cr = recompute_cr(0x00000061u);
         gpio[1].idr_input = (1u << 10) | (1u << 11) | (1u << 12);
-        gpio[2].idr_input = (1u << 6) | (1u << 13);
+        gpio[2].idr_input = (1u << 6) | (1u << 13) | (1u << 10);
         gpio[7].idr_input = 0;
     }
 
@@ -182,7 +182,7 @@ struct System : arm::Memory {
         switch (off) {
             case 0x00: d.cr1 = v; break;
             case 0x04: d.cr2 = v; break;
-            case 0x0C: d.rx_byte = 0x00; d.rx_valid = true; break;
+            case 0x0C: d.rx_byte = 0xFF; d.rx_valid = true; break;
             default: break;
         }
     }

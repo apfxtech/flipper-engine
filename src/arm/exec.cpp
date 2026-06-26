@@ -110,7 +110,7 @@ static void decode16_data_processing(CPU& c, uint32_t op) {
         case 0x6: { AddResult r = AddWithCarry(rn, ~rm, c.C()); c.R[d] = r.result; if (setflags) { wflags_nz(c, r.result); c.setFlag(FLAG_C, r.carry); c.setFlag(FLAG_V, r.overflow); } break; }
         case 0x7: { ShiftResult s = Shift_C(rn, SRType_ROR, rm & 0xFF, c.C()); logic(s.result, s.carry); break; }
         case 0x8: { ShiftResult s = Shift_C(rm, SRType_LSL, 0, c.C()); uint32_t r = rn & s.result; wflags_nz(c, r); c.setFlag(FLAG_C, s.carry); break; }
-        case 0x9: { AddResult r = AddWithCarry(~rn, 0, true); c.R[d] = r.result; if (setflags) { wflags_nz(c, r.result); c.setFlag(FLAG_C, r.carry); c.setFlag(FLAG_V, r.overflow); } break; }
+        case 0x9: { AddResult r = AddWithCarry(~rm, 0, true); c.R[d] = r.result; if (setflags) { wflags_nz(c, r.result); c.setFlag(FLAG_C, r.carry); c.setFlag(FLAG_V, r.overflow); } break; }
         case 0xA: { AddResult r = AddWithCarry(rn, ~rm, true); wflags_nz(c, r.result); c.setFlag(FLAG_C, r.carry); c.setFlag(FLAG_V, r.overflow); break; }
         case 0xB: { AddResult r = AddWithCarry(rn, rm, false); wflags_nz(c, r.result); c.setFlag(FLAG_C, r.carry); c.setFlag(FLAG_V, r.overflow); break; }
         case 0xC: { ShiftResult s = Shift_C(rm, SRType_LSL, 0, c.C()); logic(rn | s.result, s.carry); break; }

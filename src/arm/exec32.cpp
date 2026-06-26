@@ -130,8 +130,9 @@ static void branches_and_misc(CPU& c, uint32_t hw1, uint32_t hw2) {
         if (sysop == 0x3B) return;
         if (sysop == 0x3E || sysop == 0x3F) {
             uint32_t rd = bits(hw2, 11, 8), sysm = bits(hw2, 7, 0), v = 0;
-            if (sysm <= 3) v = c.xpsr & 0xF800FDFFu;
-            else if (sysm >= 5 && sysm <= 7) v = c.xpsr & 0x0000FDFFu;
+            if (sysm <= 3) v = (c.xpsr & 0xF8000000u) | ((sysm & 1) ? (c.xpsr & 0x1FFu) : 0);
+            else if (sysm == 5 || sysm == 7) v = c.xpsr & 0x1FFu;
+            else if (sysm == 6) v = 0;
             else if (sysm == 8) v = c.sp_main;
             else if (sysm == 9) v = c.sp_process;
             else if (sysm == 16) v = c.primask;
@@ -482,7 +483,7 @@ void exec_vfp(CPU& c, uint32_t hw1, uint32_t hw2) {
         return;
     }
 
-    uint32_t opc1 = bits(hw1, 7, 4);
+    uint32_t opc1 = bits(hw1, 7, 4) & ~0x4u;
     uint32_t D = bit(hw1, 6), N = bit(hw2, 7), M = bit(hw2, 5);
     uint32_t Vd = (bits(hw2, 15, 12) << 1) | D;
     uint32_t Vn = (bits(hw1, 3, 0) << 1) | N;
