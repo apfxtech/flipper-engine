@@ -1,4 +1,6 @@
 #include "cpu.hpp"
+#include <cmath>
+#include <cstring>
 
 namespace arm {
 
@@ -300,7 +302,7 @@ static int32_t sat32q(CPU& c, int64_t v) {
 static void dp_register(CPU& c, uint32_t hw1, uint32_t hw2) {
     uint32_t a = bits(hw1, 7, 4), b = bits(hw2, 7, 4);
     uint32_t n = bits(hw1, 3, 0), d = bits(hw2, 11, 8), m = bits(hw2, 3, 0);
-    if (b == 0 && (a & 0x8) == 0 && (a & 0x1) == 0) {
+    if (b == 0 && (a & 0x8) == 0) {
         SRType t = (SRType)((a >> 1) & 3);
         ShiftResult s = Shift_C(c.R[n], t, c.R[m] & 0xFF, c.C());
         c.R[d] = s.result;
@@ -411,8 +413,159 @@ void exec_thumb32(CPU& c, uint32_t hw1, uint32_t hw2) {
 }
 
 void exec_vfp(CPU& c, uint32_t hw1, uint32_t hw2) {
-    (void)hw1; (void)hw2;
-    c.setFault("vfp-unimpl");
+    uint32_t coproc = bits(hw2, 11, 8);
+    if (coproc != 0xA && coproc != 0xB) { c.setFault("vfp-noncp"); return; }
+    bool dbl = (coproc == 0xB);
+    uint32_t op = bits(hw1, 11, 9);
+
+    if (op == 0x6) {
+        bool P = bit(hw1, 8), U = bit(hw1, 7), D = bit(hw1, 6), W = bit(hw1, 5), L = bit(hw1, 4);
+        uint32_t n = bits(hw1, 3, 0);
+        uint32_t Vd = bits(hw2, 15, 12), imm8 = bits(hw2, 7, 0);
+        uint32_t d = dbl ? ((D << 4) | Vd) : ((Vd << 1) | D);
+        uint32_t base = c.readR(n);
+
+        if (P && !W) {
+            uint32_t off = imm8 << 2;
+            uint32_t addr = U ? base + off : base - off;
+            if (dbl) {
+                if (L) { c.S[2 * d] = c.mem->read32(addr); c.S[2 * d + 1] = c.mem->read32(addr + 4); }
+                else { c.mem->write32(addr, c.S[2 * d]); c.mem->write32(addr + 4, c.S[2 * d + 1]); }
+            } else {
+                if (L) c.S[d] = c.mem->read32(addr);
+                else c.mem->write32(addr, c.S[d]);
+            }
+            return;
+        }
+
+        uint32_t count = dbl ? imm8 / 2 : imm8;
+        uint32_t bytes = imm8 << 2;
+        uint32_t addr = U ? base : base - bytes;
+        for (uint32_t i = 0; i < count; ++i) {
+            if (dbl) {
+                if (L) { c.S[2 * (d + i)] = c.mem->read32(addr); c.S[2 * (d + i) + 1] = c.mem->read32(addr + 4); }
+                else { c.mem->write32(addr, c.S[2 * (d + i)]); c.mem->write32(addr + 4, c.S[2 * (d + i) + 1]); }
+                addr += 8;
+            } else {
+                if (L) c.S[d + i] = c.mem->read32(addr);
+                else c.mem->write32(addr, c.S[d + i]);
+                addr += 4;
+            }
+        }
+        if (W) c.R[n] = U ? base + bytes : base - bytes;
+        return;
+    }
+
+    uint32_t hi = bits(hw1, 11, 8);
+    if (hi != 0xE && hi != 0xF) { c.setFault("vfp-unimpl"); return; }
+
+    auto getF = [&](uint32_t r) { float f; memcpy(&f, &c.S[r], 4); return f; };
+    auto setF = [&](uint32_t r, float f) { memcpy(&c.S[r], &f, 4); };
+    auto getD = [&](uint32_t r) { double d; uint64_t u = ((uint64_t)c.S[2 * r + 1] << 32) | c.S[2 * r]; memcpy(&d, &u, 8); return d; };
+    auto setD = [&](uint32_t r, double d) { uint64_t u; memcpy(&u, &d, 8); c.S[2 * r] = (uint32_t)u; c.S[2 * r + 1] = (uint32_t)(u >> 32); };
+
+    if (bit(hw2, 4)) {
+        uint32_t Rt = bits(hw2, 15, 12);
+        if (bits(hw1, 7, 4) == 0xF || bits(hw1, 7, 4) == 0xE) {
+            bool L = bit(hw1, 4);
+            if (L) {
+                if (Rt == 15) c.xpsr = (c.xpsr & 0x0FFFFFFFu) | (c.fpscr & 0xF0000000u);
+                else c.R[Rt] = c.fpscr;
+            } else {
+                c.fpscr = c.R[Rt];
+            }
+            return;
+        }
+        uint32_t Vn = (bits(hw1, 3, 0) << 1) | bit(hw2, 7);
+        if (bit(hw1, 4)) c.R[Rt] = c.S[Vn];
+        else c.S[Vn] = c.R[Rt];
+        return;
+    }
+
+    uint32_t opc1 = bits(hw1, 7, 4);
+    uint32_t D = bit(hw1, 6), N = bit(hw2, 7), M = bit(hw2, 5);
+    uint32_t Vd = (bits(hw2, 15, 12) << 1) | D;
+    uint32_t Vn = (bits(hw1, 3, 0) << 1) | N;
+    uint32_t Vm = (bits(hw2, 3, 0) << 1) | M;
+    uint32_t Dd = (D << 4) | bits(hw2, 15, 12);
+    uint32_t Dn = (N << 4) | bits(hw1, 3, 0);
+    uint32_t Dm = (M << 4) | bits(hw2, 3, 0);
+    uint32_t opc3 = bits(hw2, 7, 6);
+
+    auto cmp_flags = [&](double a, double b) {
+        uint32_t f;
+        if (a == b) f = 0x6;
+        else if (a < b) f = 0x8;
+        else if (a > b) f = 0x2;
+        else f = 0x3;
+        c.fpscr = (c.fpscr & 0x0FFFFFFFu) | (f << 28);
+    };
+
+    switch (opc1) {
+        case 0x0:
+            if (dbl) setD(Dd, (opc3 & 1) ? getD(Dd) - getD(Dn) * getD(Dm) : getD(Dd) + getD(Dn) * getD(Dm));
+            else setF(Vd, (opc3 & 1) ? getF(Vd) - getF(Vn) * getF(Vm) : getF(Vd) + getF(Vn) * getF(Vm));
+            return;
+        case 0x2:
+            if (opc3 & 1) { if (dbl) setD(Dd, -(getD(Dn) * getD(Dm))); else setF(Vd, -(getF(Vn) * getF(Vm))); }
+            else { if (dbl) setD(Dd, getD(Dn) * getD(Dm)); else setF(Vd, getF(Vn) * getF(Vm)); }
+            return;
+        case 0x3:
+            if (dbl) setD(Dd, (opc3 & 1) ? getD(Dn) - getD(Dm) : getD(Dn) + getD(Dm));
+            else setF(Vd, (opc3 & 1) ? getF(Vn) - getF(Vm) : getF(Vn) + getF(Vm));
+            return;
+        case 0x8:
+            if (dbl) setD(Dd, getD(Dn) / getD(Dm));
+            else setF(Vd, getF(Vn) / getF(Vm));
+            return;
+        case 0xB: {
+            if ((opc3 & 1) == 0) {
+                uint32_t imm8 = (bits(hw1, 3, 0) << 4) | bits(hw2, 3, 0);
+                uint32_t a = bit(imm8, 7), b = bit(imm8, 6), cdefgh = imm8 & 0x3F;
+                if (dbl) {
+                    uint64_t u = ((uint64_t)a << 63) | ((uint64_t)(b ^ 1) << 62) | ((uint64_t)(b ? 0xFF : 0) << 54) | ((uint64_t)cdefgh << 48);
+                    double d; memcpy(&d, &u, 8); setD(Dd, d);
+                } else {
+                    uint32_t u = (a << 31) | ((b ^ 1) << 30) | ((b ? 0x1F : 0) << 25) | (cdefgh << 19);
+                    float f; memcpy(&f, &u, 4); setF(Vd, f);
+                }
+                return;
+            }
+            uint32_t opc2 = bits(hw1, 3, 0);
+            switch (opc2) {
+                case 0x0:
+                    if (opc3 == 1) { if (dbl) setD(Dd, getD(Dm)); else setF(Vd, getF(Vm)); }
+                    else { if (dbl) setD(Dd, fabs(getD(Dm))); else setF(Vd, fabsf(getF(Vm))); }
+                    return;
+                case 0x1:
+                    if (opc3 == 1) { if (dbl) setD(Dd, -getD(Dm)); else setF(Vd, -getF(Vm)); }
+                    else { if (dbl) setD(Dd, sqrt(getD(Dm))); else setF(Vd, sqrtf(getF(Vm))); }
+                    return;
+                case 0x4:
+                case 0x5:
+                    if (dbl) cmp_flags(getD(Dd), (opc2 == 0x5) ? 0.0 : getD(Dm));
+                    else cmp_flags(getF(Vd), (opc2 == 0x5) ? 0.0f : getF(Vm));
+                    return;
+                case 0x7:
+                    if (dbl) setF(Vd, (float)getD(Dm));
+                    else setD(Dd, (double)getF(Vm));
+                    return;
+                case 0x8:
+                    if (dbl) setD(Dd, bit(hw2, 7) ? (double)(int32_t)c.S[Vm] : (double)(uint32_t)c.S[Vm]);
+                    else setF(Vd, bit(hw2, 7) ? (float)(int32_t)c.S[Vm] : (float)(uint32_t)c.S[Vm]);
+                    return;
+                case 0xC:
+                case 0xD: {
+                    bool to_signed = (opc2 == 0xD);
+                    double v = dbl ? getD(Dm) : (double)getF(Vm);
+                    c.S[Vd] = to_signed ? (uint32_t)(int32_t)v : (uint32_t)v;
+                    return;
+                }
+                default: c.setFault("vfp-cvt"); return;
+            }
+        }
+        default: c.setFault("vfp-dp"); return;
+    }
 }
 
 }

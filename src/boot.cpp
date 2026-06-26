@@ -77,6 +77,12 @@ int main(int argc, char** argv) {
             printf("BIG-MALLOC(%u) at step %llu LR=%08X : %s\n", c.R[0], (unsigned long long)n,
                    c.R[14], dis((c.R[14] & ~1u) - 4));
         }
+        if (!sys.core2_started && (n & 63) == 0) {
+            bool was = sys.core2_started;
+            sys.core2_tick();
+            if (!was && sys.core2_started)
+                printf("CORE2 ready injected at step %llu PC=%08X\n", (unsigned long long)n, c.R[15]);
+        }
         window[wi++ & 255] = c.R[15];
         if (!arm::cpu_step(c)) {
             printf("\nFAULT step %llu PC=%08X: %s\n  %s\n", (unsigned long long)n, c.R[15],
