@@ -1,0 +1,206 @@
+Table,Operation,Description,Assembler,Cycles
+Core (3.1),Move,Register,"MOV Rd, <op2>",1
+Core (3.1),Move,16-bit immediate,"MOVW Rd, #<imm>",1
+Core (3.1),Move,Immediate into top,"MOVT Rd, #<imm>",1
+Core (3.1),Move,To PC,"MOV PC, Rm",1 + P
+Core (3.1),Add,Add,"ADD Rd, Rn, <op2>",1
+Core (3.1),Add,Add to PC,"ADD PC, PC, Rm",1 + P
+Core (3.1),Add,Add with carry,"ADC Rd, Rn, <op2>",1
+Core (3.1),Add,Form address,"ADR Rd, <label>",1
+Core (3.1),Subtract,Subtract,"SUB Rd, Rn, <op2>",1
+Core (3.1),Subtract,Subtract with borrow,"SBC Rd, Rn, <op2>",1
+Core (3.1),Subtract,Reverse,"RSB Rd, Rn, <op2>",1
+Core (3.1),Multiply,Multiply,"MUL Rd, Rn, Rm",1
+Core (3.1),Multiply,Multiply accumulate,"MLA Rd, Rn, Rm",2
+Core (3.1),Multiply,Multiply subtract,"MLS Rd, Rn, Rm",2
+Core (3.1),Multiply,Long signed,"SMULL RdLo, RdHi, Rn, Rm",1
+Core (3.1),Multiply,Long unsigned,"UMULL RdLo, RdHi, Rn, Rm",1
+Core (3.1),Multiply,Long signed accumulate,"SMLAL RdLo, RdHi, Rn, Rm",1
+Core (3.1),Multiply,Long unsigned accumulate,"UMLAL RdLo, RdHi, Rn, Rm",1
+Core (3.1),Divide,Signed,"SDIV Rd, Rn, Rm",2 to 12 [a]
+Core (3.1),Divide,Unsigned,"UDIV Rd, Rn, Rm",2 to 12 [a]
+Core (3.1),Saturate,Signed,"SSAT Rd, #<imm>, <op2>",1
+Core (3.1),Saturate,Unsigned,"USAT Rd, #<imm>, <op2>",1
+Core (3.1),Compare,Compare,"CMP Rn, <op2>",1
+Core (3.1),Compare,Negative,"CMN Rn, <op2>",1
+Core (3.1),Logical,AND,"AND Rd, Rn, <op2>",1
+Core (3.1),Logical,Exclusive OR,"EOR Rd, Rn, <op2>",1
+Core (3.1),Logical,OR,"ORR Rd, Rn, <op2>",1
+Core (3.1),Logical,OR NOT,"ORN Rd, Rn, <op2>",1
+Core (3.1),Logical,Bit clear,"BIC Rd, Rn, <op2>",1
+Core (3.1),Logical,Move NOT,"MVN Rd, <op2>",1
+Core (3.1),Logical,AND test,"TST Rn, <op2>",1
+Core (3.1),Logical,Exclusive OR test,"TEQ Rn, <op1>",
+Core (3.1),Shift,Logical shift left,"LSL Rd, Rn, #<imm>",1
+Core (3.1),Shift,Logical shift left,"LSL Rd, Rn, Rs",1
+Core (3.1),Shift,Logical shift right,"LSR Rd, Rn, #<imm>",1
+Core (3.1),Shift,Logical shift right,"LSR Rd, Rn, Rs",1
+Core (3.1),Shift,Arithmetic shift right,"ASR Rd, Rn, #<imm>",1
+Core (3.1),Shift,Arithmetic shift right,"ASR Rd, Rn, Rs",1
+Core (3.1),Rotate,Rotate right,"ROR Rd, Rn, #<imm>",1
+Core (3.1),Rotate,Rotate right,"ROR Rd, Rn, Rs",1
+Core (3.1),Rotate,With extension,"RRX Rd, Rn",1
+Core (3.1),Count,Leading zeroes,"CLZ Rd, Rn",1
+Core (3.1),Load,Word,"LDR Rd, [Rn, <op2>]",2 [b]
+Core (3.1),Load,To PC,"LDR PC, [Rn, <op2>]",2 [b] + P
+Core (3.1),Load,Halfword,"LDRH Rd, [Rn, <op2>]",2 [b]
+Core (3.1),Load,Byte,"LDRB Rd, [Rn, <op2>]",2 [b]
+Core (3.1),Load,Signed halfword,"LDRSH Rd, [Rn, <op2>]",2 [b]
+Core (3.1),Load,Signed byte,"LDRSB Rd, [Rn, <op2>]",2 [b]
+Core (3.1),Load,User word,"LDRT Rd, [Rn, #<imm>]",2 [b]
+Core (3.1),Load,User halfword,"LDRHT Rd, [Rn, #<imm>]",2 [b]
+Core (3.1),Load,User byte,"LDRBT Rd, [Rn, #<imm>]",2 [b]
+Core (3.1),Load,User signed halfword,"LDRSHT Rd, [Rn, #<imm>]",2 [b]
+Core (3.1),Load,User signed byte,"LDRSBT Rd, [Rn, #<imm>]",2 [b]
+Core (3.1),Load,PC relative,"LDR Rd,[PC, #<imm>]",2 [b]
+Core (3.1),Load,Doubleword,"LDRD Rd, Rd, [Rn, #<imm>]",1 + N
+Core (3.1),Load,Multiple,"LDM Rn, {<reglist>}",1 + N
+Core (3.1),Load,Multiple including PC,"LDM Rn, {<reglist>, PC}",1 + N + P
+Core (3.1),Store,Word,"STR Rd, [Rn, <op2>]",2 [b]
+Core (3.1),Store,Halfword,"STRH Rd, [Rn, <op2>]",2 [b]
+Core (3.1),Store,Byte,"STRB Rd, [Rn, <op2>]",2 [b]
+Core (3.1),Store,Signed halfword,"STRSH Rd, [Rn, <op2>]",2 [b]
+Core (3.1),Store,Signed byte,"STRSB Rd, [Rn, <op2>]",2 [b]
+Core (3.1),Store,User word,"STRT Rd, [Rn, #<imm>]",2 [b]
+Core (3.1),Store,User halfword,"STRHT Rd, [Rn, #<imm>]",2 [b]
+Core (3.1),Store,User byte,"STRBT Rd, [Rn, #<imm>]",2 [b]
+Core (3.1),Store,User signed halfword,"STRSHT Rd, [Rn, #<imm>]",2 [b]
+Core (3.1),Store,User signed byte,"STRSBT Rd, [Rn, #<imm>]",2 [b]
+Core (3.1),Store,Doubleword,"STRD Rd, Rd, [Rn, #<imm>]",1 + N
+Core (3.1),Store,Multiple,"STM Rn, {<reglist>}",1 + N
+Core (3.1),Push,Push,PUSH {<reglist>},1 + N
+Core (3.1),Push,Push with link register,"PUSH {<reglist>, LR}",1 + N
+Core (3.1),Pop,Pop,POP {<reglist>},1 + N
+Core (3.1),Pop,Pop and return,"POP {<reglist>, PC}",1 + N + P
+Core (3.1),Semaphore,Load exclusive,"LDREX Rd, [Rn, #<imm>]",2
+Core (3.1),Semaphore,Load exclusive half,"LDREXH Rd, [Rn]",2
+Core (3.1),Semaphore,Load exclusive byte,"LDREXB Rd, [Rn]",2
+Core (3.1),Semaphore,Store exclusive,"STREX Rd, Rt, [Rn, #<imm>]",2
+Core (3.1),Semaphore,Store exclusive half,"STREXH Rd, Rt, [Rn]",2
+Core (3.1),Semaphore,Store exclusive byte,"STREXB Rd, Rt, [Rn]",2
+Core (3.1),Semaphore,Clear exclusive monitor,CLREX,1
+Core (3.1),Branch,Conditional,B<cc> <label>,1 or 1 + P [c]
+Core (3.1),Branch,Unconditional,B <label>,1 + P
+Core (3.1),Branch,With link,BL <label>,1 + P
+Core (3.1),Branch,With exchange,BX Rm,1 + P
+Core (3.1),Branch,With link and exchange,BLX Rm,1 + P
+Core (3.1),Branch,Branch if zero,"CBZ Rn, <label>",1 or 1 + P [c]
+Core (3.1),Branch,Branch if non-zero,"CBNZ Rn, <label>",1 or 1 + P [c]
+Core (3.1),Branch,Byte table branch,"TBB [Rn, Rm]",2 + P
+Core (3.1),Branch,Halfword table branch,"TBH [Rn, Rm, LSL#1]",2 + P
+Core (3.1),State change,Supervisor call,SVC #<imm>,-
+Core (3.1),State change,If-then-else,IT... <cond>,1 [d]
+Core (3.1),State change,Disable interrupts,CPSID <flags>,1 or 2
+Core (3.1),State change,Enable interrupts,CPSIE <flags>,1 or 2
+Core (3.1),State change,Read special register,"MRS Rd, <specreg>",1 or 2
+Core (3.1),State change,Write special register,"MSR <specreg>, Rn",1 or 2
+Core (3.1),State change,Breakpoint,BKPT #<imm>,-
+Core (3.1),Extend,Signed halfword to word,"SXTH Rd, <op2>",1
+Core (3.1),Extend,Signed byte to word,"SXTB Rd, <op2>",1
+Core (3.1),Extend,Unsigned halfword,"UXTH Rd, <op2>",1
+Core (3.1),Extend,Unsigned byte,"UXTB Rd, <op2>",1
+Core (3.1),Bit field,Extract unsigned,"UBFX Rd, Rn, #<imm>, #<imm>",1
+Core (3.1),Bit field,Extract signed,"SBFX Rd, Rn, #<imm>, #<imm>",1
+Core (3.1),Bit field,Clear,"BFC Rd, Rn, #<imm>, #<imm>",1
+Core (3.1),Bit field,Insert,"BFI Rd, Rn, #<imm>, #<imm>",1
+Core (3.1),Reverse,Bytes in word,"REV Rd, Rm",1
+Core (3.1),Reverse,Bytes in both halfwords,"REV16 Rd, Rm",1
+Core (3.1),Reverse,Signed bottom halfword,"REVSH Rd, Rm",1
+Core (3.1),Reverse,Bits in word,"RBIT Rd, Rm",1
+Core (3.1),Hint,Send event,SEV,1
+Core (3.1),Hint,Wait for event,WFE,1 + W
+Core (3.1),Hint,Wait for interrupt,WFI,1 + W
+Core (3.1),Hint,No operation,NOP,1
+Core (3.1),Barriers,Instruction synchronization,ISB,1 + B
+Core (3.1),Barriers,Data memory,DMB,1 + B
+Core (3.1),Barriers,Data synchronization,DSB <flags>,1 + B
+Core (3.1),"[a] Division operations use early termination to minimize the number of cycles required based on the number of leading ones and zeroes in the input operands. [b] Neighboring load and store single instructions can pipeline their address and data phases. This enables these instructions to complete in a single execution cycle. [c] Conditional branch completes in a single cycle if the branch is not taken. [d] An IT instruction can be folded onto a preceding 16-bit Thumb instruction, enabling execution in zero cycles.",,,
+DSP (3.2),Multiply,32-bit multiply with 32-most-significant-bit accumulate,SMMLA,1
+DSP (3.2),Multiply,32-bit multiply with 32-most-significant-bit subtract,SMMLS,1
+DSP (3.2),Multiply,32-bit multiply returning 32-most-significant-bits,SMMUL,1
+DSP (3.2),Multiply,32-bit multiply with rounded 32-most-significant-bit accumulate,SMMLAR,1
+DSP (3.2),Multiply,32-bit multiply with rounded 32-most-significant-bit subtract,SMMLSR,1
+DSP (3.2),Multiply,32-bit multiply returning rounded 32-most-significant-bits,SMMULR,1
+DSP (3.2),Signed Multiply,"Q setting 16-bit signed multiply with 32-bit accumulate, bottom by bottom",SMLABB,1
+DSP (3.2),Signed Multiply,"Q setting 16-bit signed multiply with 32-bit accumulate, bottom by top",SMLABT,1
+DSP (3.2),Signed Multiply,"16-bit signed multiply with 64-bit accumulate, bottom by bottom",SMLALBB,1
+DSP (3.2),Signed Multiply,"16-bit signed multiply with 64-bit accumulate, bottom by top",SMLALBT,1
+DSP (3.2),Signed Multiply,Dual 16-bit signed multiply with single 64-bit accumulator,SMLALD,1
+DSP (3.2),Signed Multiply,"16-bit signed multiply with 64-bit accumulate, top by bottom",SMLALTB,1
+DSP (3.2),Signed Multiply,"16-bit signed multiply with 64-bit accumulate, top by top",SMLALTT,1
+DSP (3.2),Signed Multiply,"16-bit signed multiply yielding 32-bit result, bottom by bottom",SMULBB,1
+DSP (3.2),Signed Multiply,"16-bit signed multiply yielding 32-bit result, bottom by top",SMULBT,1
+DSP (3.2),Signed Multiply,"16-bit signed multiply yielding 32-bit result, top by bottom",SMULTB,1
+DSP (3.2),Signed Multiply,"16-bit signed multiply yielding 32-bit result, top by bottom",SMULTT,1
+DSP (3.2),Signed Multiply,"16-bit by 32-bit signed multiply returning 32-most-significant-bits, bottom",SMULWB,1
+DSP (3.2),Signed Multiply,"16-bit by 32-bit signed multiply returning 32-most-significant-bits, top",SMULWT,1
+DSP (3.2),Signed Multiply,Dual 16-bit signed multiply returning difference,SMUSD,1
+DSP (3.2),Signed Multiply,"Q setting 16-bit signed multiply with 32-bit accumulate, top by bottom",SMLATB,1
+DSP (3.2),Signed Multiply,"Q setting 16-bit signed multiply with 32-bit accumulate, top by top",SMLATT,1
+DSP (3.2),Signed Multiply,Q setting dual 16-bit signed multiply with single 32-bit accumulator,SMLAD,1
+DSP (3.2),Signed Multiply,"Q setting 16-bit by 32-bit signed multiply with 32-bit accumulate, bottom",SMLAWB,1
+DSP (3.2),Signed Multiply,"Q setting 16-bit by 32-bit signed multiply with 32-bit accumulate, top",SMLAWT,1
+DSP (3.2),Signed Multiply,Q setting dual 16-bit signed multiply subtract with 32-bit accumulate,SMLSD,1
+DSP (3.2),Signed Multiply,Q setting dual 16-bit signed multiply subtract with 64-bit accumulate,SMLSLD,1
+DSP (3.2),Signed Multiply,Q setting sum of dual 16-bit signed multiply,SMUAD,1
+DSP (3.2),Signed Multiply,Q setting pre-exchanged dual 16-bit signed multiply with single 32-bit accumulator,SMLADX,1
+DSP (3.2),Unsigned Multiply,32-bit unsigned multiply with double 32-bit accumulation yielding 64-bit result,UMAAL,1
+DSP (3.2),Saturate,Q setting dual 16-bit saturate,SSAT16,1
+DSP (3.2),Saturate,Q setting dual 16-bit unsigned saturate,USAT16,1
+DSP (3.2),Packing and Unpacking,Pack half word top with shifted bottom,PKHTB,1
+DSP (3.2),Packing and Unpacking,Pack half word bottom with shifted top,PKHBT,1
+DSP (3.2),Packing and Unpacking,Extract 8-bits and sign extend to 32-bits,SXTB,1
+DSP (3.2),Packing and Unpacking,Dual extract 8-bits and sign extend each to 16-bits,SXTB16,1
+DSP (3.2),Packing and Unpacking,Extract 16-bits and sign extend to 32-bits,SXTH,1
+DSP (3.2),Packing and Unpacking,Extract 8-bits and zero-extend to 32-bits,UXTB,1
+DSP (3.2),Packing and Unpacking,Dual extract 8-bits and zero-extend to 16-bits,UXTB16,1
+DSP (3.2),Packing and Unpacking,Extract 16-bits and zero-extend to 32-bits,UXTH,1
+DSP (3.2),Packing and Unpacking,Extract 8-bit to 32-bit unsigned addition,UXTAB,1
+DSP (3.2),Packing and Unpacking,Dual extracted 8-bit to 16-bit unsigned addition,UXTAB16,1
+DSP (3.2),Packing and Unpacking,Extracted 16-bit to 32-bit unsigned addition,UXTAH,1
+DSP (3.2),Packing and Unpacking,Extracted 8-bit to 32-bit signed addition,SXTAB,1
+DSP (3.2),Packing and Unpacking,Dual extracted 8-bit to 16-bit signed addition,SXTAB16,1
+DSP (3.2),Packing and Unpacking,Extracted 16-bit to 32-bit signed addition,SXTAH,1
+DSP (3.2),Miscellaneous Data Processing,Select bytes based on GE bits,SEL,1
+DSP (3.2),Miscellaneous Data Processing,Unsigned sum of quad 8-bit unsigned absolute difference,USAD8,1
+DSP (3.2),Miscellaneous Data Processing,Unsigned sum of quad 8-bit unsigned absolute difference with 32-bit accumulate,USADA8,1
+DSP (3.2),Addition,Dual 16-bit unsigned saturating addition,UQADD16,1
+DSP (3.2),Addition,Quad 8-bit unsigned saturating addition,UQADD8,1
+DSP (3.2),Addition,Q setting saturating add,QADD,1
+DSP (3.2),Addition,Q setting dual 16-bit saturating add,QADD16,1
+DSP (3.2),Addition,Q setting quad 8-bit saturating add,QADD8,1
+DSP (3.2),Addition,Q setting saturating double and add,QDADD,1
+DSP (3.2),Addition,GE setting quad 8-bit signed addition,SADD8,1
+DSP (3.2),Addition,GE setting dual 16-bit signed addition,SADD16,1
+DSP (3.2),Addition,Dual 16-bit signed addition with halved results,SHADD16,1
+DSP (3.2),Addition,Quad 8-bit signed addition with halved results,SHADD8,1
+DSP (3.2),Addition,GE setting dual 16-bit unsigned addition,UADD16,1
+DSP (3.2),Addition,GE setting quad 8-bit unsigned addition,UADD8,1
+DSP (3.2),Addition,Dual 16-bit unsigned addition with halved results,UHADD16,1
+DSP (3.2),Addition,Quad 8-bit unsigned addition with halved results,UHADD8,1
+DSP (3.2),Subtraction,Q setting saturating double and subtract,QDSUB,1
+DSP (3.2),Subtraction,Dual 16-bit unsigned saturating subtraction,UQSUB16,1
+DSP (3.2),Subtraction,Quad 8-bit unsigned saturating subtraction,UQSUB8,1
+DSP (3.2),Subtraction,Q setting saturating subtract,QSUB,1
+DSP (3.2),Subtraction,Q setting dual 16-bit saturating subtract,QSUB16,1
+DSP (3.2),Subtraction,Q setting quad 8-bit saturating subtract,QSUB8,1
+DSP (3.2),Subtraction,Dual 16-bit signed subtraction with halved results,SHSUB16,1
+DSP (3.2),Subtraction,Quad 8-bit signed subtraction with halved results,SHSUB8,1
+DSP (3.2),Subtraction,GE setting dual 16-bit signed subtraction,SSUB16,1
+DSP (3.2),Subtraction,GE setting quad 8-bit signed subtraction,SSUB8,1
+DSP (3.2),Subtraction,Dual 16-bit unsigned subtraction with halved results,UHSUB16,1
+DSP (3.2),Subtraction,Quad 8-bit unsigned subtraction with halved results,UHSUB8,1
+DSP (3.2),Subtraction,GE setting dual 16-bit unsigned subtract,USUB16,1
+DSP (3.2),Subtraction,GE setting quad 8-bit unsigned subtract,USUB8,1
+DSP (3.2),Parallel Addition and Subtraction,Dual 16-bit unsigned saturating addition and subtraction with exchange,UQASX,1
+DSP (3.2),Parallel Addition and Subtraction,Dual 16-bit unsigned saturating subtraction and addition with exchange,UQSAX,1
+DSP (3.2),Parallel Addition and Subtraction,GE setting dual 16-bit addition and subtraction with exchange,SASX,1
+DSP (3.2),Parallel Addition and Subtraction,Q setting dual 16-bit add and subtract with exchange,QASX,1
+DSP (3.2),Parallel Addition and Subtraction,Q setting dual 16-bit subtract and add with exchange,QSAX,1
+DSP (3.2),Parallel Addition and Subtraction,Dual 16-bit signed addition and subtraction with halved results,SHASX,1
+DSP (3.2),Parallel Addition and Subtraction,Dual 16-bit signed subtraction and addition with halved results,SHSAX,1
+DSP (3.2),Parallel Addition and Subtraction,GE setting dual 16-bit signed subtraction and addition with exchange,SSAX,1
+DSP (3.2),Parallel Addition and Subtraction,GE setting dual 16-bit unsigned addition and subtraction with exchange,UASX,1
+DSP (3.2),Parallel Addition and Subtraction,Dual 16-bit unsigned addition and subtraction with halved results and exchange,UHASX,1
+DSP (3.2),Parallel Addition and Subtraction,Dual 16-bit unsigned subtraction and addition with halved results and exchange,UHSAX,1
+DSP (3.2),Parallel Addition and Subtraction,GE setting dual 16-bit unsigned subtract and add with exchange,USAX,1

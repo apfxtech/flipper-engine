@@ -60,6 +60,27 @@ int main(int argc, char** argv) {
     arm::cpu_reset(c, fze::FLASH_BASE);
     printf("reset PC=%08X SP=%08X\n", c.R[15], c.R[13]);
 
+    int frame_count = 0;
+    bool dumped = false;
+    sys.bridge.on_frame = [&](const uint8_t* px, int w, int h) {
+        ++frame_count;
+        int set = 0;
+        for (int i = 0; i < w * h; ++i) set += px[i];
+        if (dumped || set < 300) return;
+        dumped = true;
+        printf("\n=== FRAME #%d, %d px set, cyc %llu (on=%d) ===\n", frame_count, set,
+               (unsigned long long)c.cycles, sys.lcd.on);
+        for (int y = 0; y < h; y += 2) {
+            for (int x = 0; x < w; ++x) {
+                int top = px[y * w + x], bot = (y + 1 < h) ? px[(y + 1) * w + x] : 0;
+                const char* ch = top && bot ? "█" : top ? "▀" : bot ? "▄" : " ";
+                fputs(ch, stdout);
+            }
+            putchar('\n');
+        }
+        fflush(stdout);
+    };
+
     uint32_t window[256];
     int wi = 0;
     uint64_t n = 0;
@@ -118,5 +139,9 @@ int main(int argc, char** argv) {
         }
     }
     printf("ran %llu, PC=%08X : %s\n", (unsigned long long)n, c.R[15], dis(c.R[15]));
+    printf("display: spi2_dr=%llu routed=%llu frames=%d lcd.on=%d page=%d col=%d cs(C11)=%d dc(B1)=%d\n",
+           (unsigned long long)sys.dbg_spi2_dr, (unsigned long long)sys.dbg_disp_routed,
+           frame_count, sys.lcd.on, sys.lcd.page, sys.lcd.col,
+           (sys.gpio[2].odr >> 11) & 1, (sys.gpio[1].odr >> 1) & 1);
     return 0;
 }

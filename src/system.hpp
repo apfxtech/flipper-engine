@@ -1,6 +1,8 @@
 #pragma once
 
 #include "arm/cpu.hpp"
+#include "st7565.hpp"
+#include "platform.hpp"
 #include <vector>
 #include <unordered_map>
 #include <cstring>
@@ -54,6 +56,10 @@ struct System : arm::Memory {
     };
     SpiDev spi1, spi2;
 
+    St7565 lcd;
+    CoreBridge bridge;
+    uint8_t frame_px[St7565::W * St7565::H] = {0};
+
     uint32_t rng_state = 0x2545F491u;
     uint32_t rng_next() {
         rng_state ^= rng_state << 13;
@@ -68,7 +74,7 @@ struct System : arm::Memory {
         rcc_cr = recompute_cr(0x00000061u);
         gpio[1].idr_input = (1u << 10) | (1u << 11) | (1u << 12);
         gpio[2].idr_input = (1u << 6) | (1u << 13) | (1u << 10);
-        gpio[7].idr_input = 0;
+        gpio[7].idr_input = (1u << 3);
     }
 
     static uint32_t recompute_cr(uint32_t cr) {
@@ -93,11 +99,28 @@ struct System : arm::Memory {
         return false;
     }
 
+    uint32_t button_clear_mask(int p) {
+        if (!bridge.poll_buttons) return 0;
+        uint32_t btn = bridge.poll_buttons();
+        uint32_t m = 0;
+        if (p == 1) {
+            if (btn & ButtonUp) m |= (1u << 10);
+            if (btn & ButtonLeft) m |= (1u << 11);
+            if (btn & ButtonRight) m |= (1u << 12);
+        } else if (p == 2) {
+            if (btn & ButtonDown) m |= (1u << 6);
+            if (btn & ButtonBack) m |= (1u << 13);
+        } else if (p == 7) {
+            if (btn & ButtonOk) m |= (1u << 3);
+        }
+        return m;
+    }
+
     uint32_t gpio_read(int p, uint32_t off) {
         GpioPort& g = gpio[p];
         switch (off) {
             case 0x00: return g.moder;
-            case 0x10: return g.odr | g.idr_input;
+            case 0x10: return (g.odr | g.idr_input) & ~button_clear_mask(p);
             case 0x14: return g.odr;
             default: return g.regs[off / 4 & 0xF];
         }
@@ -182,8 +205,27 @@ struct System : arm::Memory {
         switch (off) {
             case 0x00: d.cr1 = v; break;
             case 0x04: d.cr2 = v; break;
-            case 0x0C: d.rx_byte = 0xFF; d.rx_valid = true; break;
+            case 0x0C:
+                d.rx_byte = 0xFF; d.rx_valid = true;
+                if (&d == &spi2) display_byte((uint8_t)v);
+                break;
             default: break;
+        }
+    }
+
+    uint64_t dbg_spi2_dr = 0, dbg_disp_routed = 0;
+    void display_byte(uint8_t b) {
+        dbg_spi2_dr++;
+        if ((gpio[2].odr & (1u << 11)) != 0) return;
+        dbg_disp_routed++;
+        bool dc_data = gpio[1].odr & (1u << 1);
+        if (dc_data) {
+            lcd.data(b);
+        } else if (lcd.command(b)) {
+            if (bridge.on_frame) {
+                lcd.render(frame_px);
+                bridge.on_frame(frame_px, St7565::W, St7565::H);
+            }
         }
     }
 
